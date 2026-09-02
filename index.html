@@ -38,6 +38,9 @@
     .btn:hover{border-color:var(--fire-dim);color:var(--fire)}
     .btn-fire{background:var(--fire-dim);border-color:var(--fire);color:var(--bright)}
     .btn-fire:hover{background:var(--fire)}
+    .btn-speak{font-size:10px;padding:2px 10px;margin-left:8px;vertical-align:middle;border-color:var(--border-glow);color:var(--gold)}
+    .btn-speak:hover{border-color:var(--gold);color:var(--bright);background:var(--hover)}
+    .btn-speak.speaking{background:var(--gold);color:#111118;border-color:var(--gold)}
 
     .output{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:16px;margin-top:12px;min-height:60px}
     .output-label{font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
@@ -124,7 +127,7 @@
         <textarea id="inputKah" placeholder="Type Kaharin text... e.g. 'eo oimo siga ema'"></textarea>
       </div>
       <div class="output" id="translateOutput">
-        <div class="output-label">Result</div>
+        <div class="output-label">Result <button class="btn btn-speak" id="btnSpeak" title="Listen (speak Kaharin)">&#128266; Listen</button></div>
         <div class="output-text" id="translateResult">Type a sentence above and click a translate button.</div>
         <div class="output-sub" id="translateSub"></div>
       </div>
@@ -289,6 +292,8 @@
 
   <script>
     // === DICTIONARY ===
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
     // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
     // Regenerate with: node sync-translator.js
     // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
@@ -606,6 +611,7 @@
 
 
 
+
     // Build reverse dict (en -> kaharin entries)
     const revD = {};
     Object.entries(D).forEach(([k,v]) => {
@@ -735,6 +741,54 @@
       document.getElementById("translateResult").textContent = "Type a sentence above and click a translate button.";
       document.getElementById("translateSub").innerHTML = "";
     });
+
+    // === SPEAK (audible pronunciation) ===
+    // Uses the Web Speech API. Kaharin's vowels are Spanish pure monophthongs
+    // (a e i o u) with tapped /r/ and a soft /h/, so we drive the es voice.
+    const speakBtn = document.getElementById("btnSpeak");
+
+    function pickSpanishVoice() {
+      const voices = speechSynthesis.getVoices();
+      return voices.find(v => v.lang === "es-ES") ||
+             voices.find(v => v.lang && v.lang.toLowerCase().startsWith("es")) ||
+             null;
+    }
+
+    function speakKaharin(text) {
+      if (!("speechSynthesis" in window)) { alert("Audio not supported in this browser."); return; }
+      speechSynthesis.cancel();
+      const t = text.trim();
+      if (!t) return;
+      const u = new SpeechSynthesisUtterance(t);
+      const v = pickSpanishVoice();
+      if (v) u.voice = v; else u.lang = "es";
+      u.rate = 0.85;        // measured, even beats (Rule 3)
+      u.pitch = 0.9;        // low-mid chest resonance
+      u.volume = 1;
+      u.onstart = () => speakBtn.classList.add("speaking");
+      u.onend = u.onerror = () => speakBtn.classList.remove("speaking");
+      speechSynthesis.speak(u);
+    }
+
+    if (speechSynthesis) {
+      // Voices load asynchronously in Chrome/Safari — refresh the picker when ready.
+      speechSynthesis.onvoiceschanged = () => pickSpanishVoice();
+      speechSynthesis.getVoices();
+    }
+
+    speakBtn.addEventListener("click", () => {
+      const current = document.getElementById("translateResult").textContent;
+      if (current && current.indexOf("Type a sentence") === -1) {
+        speakKaharin(current);
+      } else {
+        const input = document.getElementById("inputKah").value.trim();
+        if (input) speakKaharin(input);
+      }
+    });
+
+    // Autoplay policies require a user gesture before speech; harmless pre-load.
+    window.addEventListener("keydown", () => speechSynthesis.getVoices());
+
 
     // === VOCAB ===
     const allWords = Object.entries(D).map(([k,v]) => ({word:k,...v}));
