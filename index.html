@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kaharin Translator</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --bg:#0c0c12;--panel:#111118;--card:#16161f;--hover:#1e1e2a;
+      --border:#2a2a3a;--border-glow:#c87533;
+      --text:#c8c0b0;--dim:#7a7568;--bright:#e8dcc8;
+      --fire:#c87533;--fire-dim:#8a5020;--fire-glow:#e8a050;
+      --gold:#c8a833;--sky:#5588aa;--water:#4488aa;
+    }
+    body{font-family:Georgia,'Times New Roman',serif;background:var(--bg);color:var(--text);min-height:100vh}
+    .container{max-width:720px;margin:0 auto;padding:20px}
+
+    header{text-align:center;padding:30px 0 20px;border-bottom:1px solid var(--border)}
+    h1{font-size:22px;color:var(--fire);letter-spacing:3px;text-transform:uppercase;font-weight:400}
+    .subtitle{font-size:11px;color:var(--dim);letter-spacing:1px;margin-top:4px}
+
+    .tabs{display:flex;border-bottom:1px solid var(--border);margin-top:20px}
+    .tab{flex:1;padding:10px;background:none;border:none;color:var(--dim);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;transition:all .15s}
+    .tab.active{color:var(--fire);border-bottom-color:var(--fire)}
+    .tab:hover{color:var(--text)}
+    .panel{display:none;padding:24px 0}
+    .panel.active{display:block}
+
+    /* TRANSLATOR */
+    .input-group{margin-bottom:16px}
+    .input-label{font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+    textarea{width:100%;min-height:80px;background:var(--card);border:1px solid var(--border);color:var(--bright);font-family:Georgia,serif;font-size:14px;padding:12px;border-radius:6px;resize:vertical;line-height:1.6}
+    textarea:focus{outline:none;border-color:var(--fire-dim)}
+    textarea::placeholder{color:var(--dim)}
+
+    .btn{background:var(--card);border:1px solid var(--border);color:var(--text);padding:8px 20px;border-radius:4px;font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:inherit;transition:all .15s}
+    .btn:hover{border-color:var(--fire-dim);color:var(--fire)}
+    .btn-fire{background:var(--fire-dim);border-color:var(--fire);color:var(--bright)}
+    .btn-fire:hover{background:var(--fire)}
+
+    .output{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:16px;margin-top:12px;min-height:60px}
+    .output-label{font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+    .output-text{font-size:15px;color:var(--fire-glow);font-style:italic;line-height:1.6}
+    .output-sub{font-size:12px;color:var(--dim);margin-top:6px}
+
+    .word-result{padding:8px 0;border-bottom:1px solid var(--border)}
+    .word-result:last-child{border-bottom:none}
+    .word-kaharin{font-size:14px;color:var(--fire-glow);font-style:italic}
+    .word-english{font-size:12px;color:var(--text)}
+    .word-pos{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-left:6px}
+
+    /* VOCAB */
+    .search-box{width:100%;background:var(--card);border:1px solid var(--border);color:var(--bright);font-family:Georgia,serif;font-size:14px;padding:10px 14px;border-radius:6px;margin-bottom:16px}
+    .search-box:focus{outline:none;border-color:var(--fire-dim)}
+    .search-box::placeholder{color:var(--dim)}
+
+    .filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+    .filter-btn{background:var(--card);border:1px solid var(--border);color:var(--dim);padding:4px 10px;border-radius:12px;font-size:10px;letter-spacing:.5px;cursor:pointer;font-family:inherit;transition:all .15s}
+    .filter-btn.active{border-color:var(--fire-dim);color:var(--fire)}
+    .filter-btn:hover{border-color:var(--fire-dim)}
+
+    .vocab-list{max-height:480px;overflow-y:auto}
+    .vocab-list::-webkit-scrollbar{width:4px}
+    .vocab-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+    .vocab-row{display:flex;align-items:baseline;gap:8px;padding:6px 8px;border-radius:4px;cursor:default;transition:background .1s}
+    .vocab-row:hover{background:var(--hover)}
+    .v-word{font-size:13px;color:var(--fire-glow);font-style:italic;min-width:100px}
+    .v-pos{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;min-width:60px}
+    .v-meaning{font-size:12px;color:var(--text)}
+    .v-etym{font-size:10px;color:var(--dim);font-style:italic;margin-left:auto}
+
+    /* CONJUGATOR */
+    .conj-row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+    .conj-row select,.conj-row input{background:var(--card);border:1px solid var(--border);color:var(--bright);font-family:Georgia,serif;font-size:13px;padding:8px 12px;border-radius:4px;flex:1;min-width:120px}
+    .conj-row select:focus,.conj-row input:focus{outline:none;border-color:var(--fire-dim)}
+    .conj-table{width:100%;border-collapse:collapse;margin-top:12px}
+    .conj-table th{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;padding:8px;text-align:left;border-bottom:1px solid var(--border)}
+    .conj-table td{font-size:13px;color:var(--fire-glow);font-style:italic;padding:6px 8px;border-bottom:1px solid var(--border)}
+    .conj-table td:first-child{color:var(--text);font-style:normal;font-size:12px}
+
+    /* GRAMMAR */
+    .grammar-section{margin-bottom:20px}
+    .grammar-section h3{font-size:13px;color:var(--fire);margin-bottom:8px;font-weight:400}
+    .grammar-section p{font-size:13px;line-height:1.6;margin-bottom:8px}
+    .grammar-example{background:var(--card);border-left:2px solid var(--fire-dim);padding:8px 12px;margin:8px 0;font-size:13px}
+    .grammar-example .k{color:var(--fire-glow);font-style:italic}
+    .grammar-example .e{color:var(--dim);font-size:12px}
+
+    .count-badge{font-size:9px;color:var(--dim);margin-left:4px}
+
+    footer{text-align:center;padding:20px 0;border-top:1px solid var(--border);margin-top:20px}
+    footer p{font-size:10px;color:var(--dim);letter-spacing:1px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Kaharin Translator</h1>
+      <div class="subtitle">Eo irhi re Kaharin — The language of Kaharin</div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="translate">Translate</button>
+      <button class="tab" data-tab="vocab">Dictionary</button>
+      <button class="tab" data-tab="conjugate">Conjugator</button>
+      <button class="tab" data-tab="grammar">Grammar</button>
+    </div>
+
+    <!-- TRANSLATE PANEL -->
+    <div class="panel active" id="panel-translate">
+      <div class="input-group">
+        <div class="input-label">English</div>
+        <textarea id="inputEn" placeholder="Type English text... e.g. 'The fire is strong'"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
+        <button class="btn btn-fire" id="btnEnToKah">English → Kaharin</button>
+        <button class="btn" id="btnKahToEn">Kaharin → English</button>
+        <button class="btn" id="btnClear">Clear</button>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Kaharin</div>
+        <textarea id="inputKah" placeholder="Type Kaharin text... e.g. 'eo oimo siga ema'"></textarea>
+      </div>
+      <div class="output" id="translateOutput">
+        <div class="output-label">Result</div>
+        <div class="output-text" id="translateResult">Type a sentence above and click a translate button.</div>
+        <div class="output-sub" id="translateSub"></div>
+      </div>
+    </div>
+
+    <!-- VOCAB PANEL -->
+    <div class="panel" id="panel-vocab">
+      <input type="text" class="search-box" id="vocabSearch" placeholder="Search words...">
+      <div class="filter-row" id="filterRow"></div>
+      <div class="vocab-list" id="vocabList"></div>
+    </div>
+
+    <!-- CONJUGATOR PANEL -->
+    <div class="panel" id="panel-conjugate">
+      <div class="conj-row">
+        <input type="text" id="conjRoot" placeholder="Verb root (e.g. dral)">
+        <select id="conjPerson">
+          <option value="1">1st singular (ean)</option>
+          <option value="2">2nd singular (ead)</option>
+          <option value="3" selected>3rd singular (eo)</option>
+          <option value="1pl">1st plural (eal)</option>
+          <option value="2pl">2nd plural (ear)</option>
+          <option value="3pl">3rd plural (eos)</option>
+        </select>
+      </div>
+      <div class="conj-row">
+        <select id="conjTense">
+          <option value="present">Present</option>
+          <option value="past">Past (-ashi-)</option>
+          <option value="future">Future (-oko-)</option>
+        </select>
+        <select id="conjMood">
+          <option value="indicative">Indicative</option>
+          <option value="subjunctive">Subjunctive (-esh-)</option>
+          <option value="conditional">Conditional (-uk-)</option>
+        </select>
+        <select id="conjAspect">
+          <option value="simple">Simple</option>
+          <option value="progressive">Progressive (-en-)</option>
+          <option value="perfect">Perfect (-un-)</option>
+          <option value="passive">Passive (-el-)</option>
+          <option value="causative">Causative (-ak-)</option>
+          <option value="reciprocal">Reciprocal (-in-)</option>
+        </select>
+      </div>
+      <button class="btn btn-fire" id="btnConj" style="margin-bottom:16px">Conjugate</button>
+      <div class="output" id="conjOutput">
+        <div class="output-label">Result</div>
+        <div class="output-text" id="conjResult">—</div>
+        <div class="output-sub" id="conjSub"></div>
+      </div>
+      <div id="conjTableWrap" style="margin-top:20px"></div>
+    </div>
+
+    <!-- GRAMMAR PANEL -->
+    <div class="panel" id="panel-grammar">
+      <div class="grammar-section">
+        <h3>Word Order</h3>
+        <p>Statements use <strong>SVO</strong> (Subject-Verb-Object). Questions use <strong>VSO</strong>.</p>
+        <div class="grammar-example">
+          <span class="k">Eo drala irhi</span> <span class="e">— He speaks the language (SVO)</span>
+        </div>
+        <div class="grammar-example">
+          <span class="k">Drala eo irhi?</span> <span class="e">— Does he speak the language? (VSO)</span>
+        </div>
+      </div>
+
+      <div class="grammar-section">
+        <h3>Negation</h3>
+        <p>Particle <strong>na</strong> after the verb.</p>
+        <div class="grammar-example">
+          <span class="k">Ean dralan na</span> <span class="e">— I don't speak</span>
+        </div>
+      </div>
+
+      <div class="grammar-section">
+        <h3>Articles</h3>
+        <p><strong>eo</strong> = definite (pre-nominal). <strong>-ri</strong> = indefinite (enclitic, after apostrophe).</p>
+        <div class="grammar-example">
+          <span class="k">eo ferag</span> <span class="e">— the temple</span>
+        </div>
+        <div class="grammar-example">
+          <span class="k">ferag'ri</span> <span class="e">— a temple</span>
+        </div>
+      </div>
+
+      <div class="grammar-section">
+        <h3>Possession</h3>
+        <p><strong>re + noun</strong> = analytic (pronouns, proper nouns). <strong>noun + 'es/'e</strong> = synthetic (common nouns).</p>
+        <div class="grammar-example">
+          <span class="k">irhi re Kaharin</span> <span class="e">— language of Kaharin</span>
+        </div>
+        <div class="grammar-example">
+          <span class="k">ferag'es irhi</span> <span class="e">— temple's language</span>
+        </div>
+        <p>After sibilants (/s/, /z/), use <strong>-e</strong> instead of <strong>-es</strong>.</p>
+        <div class="grammar-example">
+          <span class="k">tibilidis'e</span> <span class="e">— scripture's (not *tibilidis'es)</span>
+        </div>
+      </div>
+
+      <div class="grammar-section">
+        <h3>Plural</h3>
+        <p>Back vowels (/a,o,u/) → <strong>-al</strong>. Front vowels (/e,i/) → <strong>-el</strong>.</p>
+        <div class="grammar-example">
+          <span class="k">ferag'al</span> <span class="e">— temples (ferag → /a/ → back)</span>
+        </div>
+        <div class="grammar-example">
+          <span class="k">irhi'el</span> <span class="e">— languages (irhi → /i/ → front)</span>
+        </div>
+      </div>
+
+      <div class="grammar-section">
+        <h3>Verb Morphology</h3>
+        <p>Six slots: <strong>ROOT + ASPECT + TENSE + MOOD + PERSON + na</strong></p>
+        <div class="grammar-example">
+          <span class="k">dral-en-ashi-uk-an</span> <span class="e">— I would have been speaking</span>
+        </div>
+      </div>
+
+      <div class="grammar-section">
+        <h3>Adpositions</h3>
+        <p>Locatives attach after the noun with apostrophe: <strong>serak'zal</strong> "in the house". <strong>rit</strong> "with" is free-standing.</p>
+        <div class="grammar-example">
+          <span class="k">ferag'zal</span> <span class="e">— in the temple</span>
+        </div>
+        <div class="grammar-example">
+          <span class="k">rit moimas tor</span> <span class="e">— with a warm coat</span>
+        </div>
+      </div>
+
+      <div class="grammar-section">
+        <h3>Compound Verbs</h3>
+        <p>Adposition + verb root, direct fusion, no apostrophe.</p>
+        <div class="grammar-example">
+          <span class="k">deorbrec-</span> <span class="e">— remove (deor "from" + brec- "take")</span>
+        </div>
+        <div class="grammar-example">
+          <span class="k">ritbrin-</span> <span class="e">— share (rit "with" + brin- "give")</span>
+        </div>
+      </div>
+
+      <div class="grammar-section">
+        <h3>Questions</h3>
+        <p>WH-words: <strong>ego</strong> (what), <strong>egu</strong> (who), <strong>ege</strong> (where), <strong>ego'shi</strong> (when), <strong>ego'kes</strong> (why), <strong>ego'mesh</strong> (how).</p>
+        <div class="grammar-example">
+          <span class="k">Ego dralad?</span> <span class="e">— What do you speak?</span>
+        </div>
+        <div class="grammar-example">
+          <span class="k">Egu eger?</span> <span class="e">— Who are you? (lit. who are-you)</span>
+        </div>
+        <div class="grammar-example">
+          <span class="k">Ege horad?</span> <span class="e">— Where do you go?</span>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Kaharin — Liturgical language of the Kaharim — Io re!</p>
+    </footer>
+  </div>
+
+  <script>
+    // === DICTIONARY ===
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    // AUTO-GENERATED from game-data.js DICTIONARY — do not edit by hand.
+    // Regenerate with: node sync-translator.js
+    const D = {
+  ean:{pos:"pronoun",en:"I/me"},
+  ead:{pos:"pronoun",en:"you (sg.)"},
+  eo:{pos:"pronoun|article",en:"he/she/it/the"},
+  eal:{pos:"pronoun",en:"we/us"},
+  ear:{pos:"pronoun",en:"you (pl.)"},
+  eos:{pos:"pronoun",en:"they/them"},
+  "res-":{pos:"verb",en:"eat",f:"action"},
+  "cal-":{pos:"verb",en:"drink",f:"action"},
+  "dras-":{pos:"verb",en:"sleep",f:"rest"},
+  "vokh-":{pos:"verb",en:"run",f:"action"},
+  "felm-":{pos:"verb",en:"see",f:"perception"},
+  "kral-":{pos:"verb",en:"hear",f:"perception"},
+  "dral-":{pos:"verb",en:"speak",f:"speech"},
+  "brin-":{pos:"verb",en:"give",f:"action"},
+  "brec-":{pos:"verb",en:"take",f:"action"},
+  "hor-":{pos:"verb",en:"go",f:"motion"},
+  "ful-":{pos:"verb",en:"come",f:"motion"},
+  "eser-":{pos:"verb",en:"sit",f:"rest"},
+  "yer-":{pos:"verb",en:"stand",f:"rest"},
+  "ulas-":{pos:"verb",en:"live",f:"state"},
+  "zhel-":{pos:"verb",en:"die",f:"state"},
+  "ras-":{pos:"verb",en:"build/create",f:"creation"},
+  "su-":{pos:"verb",en:"blow",f:"nature"},
+  "nor-":{pos:"verb",en:"count",f:"action"},
+  "du-":{pos:"verb",en:"bind/hold",f:"action"},
+  "koiv-":{pos:"verb",en:"write",f:"speech"},
+  "mur-":{pos:"verb",en:"mourn",f:"emotion"},
+  "har-":{pos:"verb",en:"fight/clash",f:"combat"},
+  "tor-":{pos:"verb",en:"strike/kill",f:"combat"},
+  "kel-":{pos:"verb",en:"keep/tend",f:"state"},
+  "okh-":{pos:"verb",en:"weep",f:"emotion"},
+  "vesh-":{pos:"verb",en:"tremble/shake",f:"emotion"},
+  "deorras-":{pos:"verb",en:"destroy",f:"combat"},
+  "helbrin-":{pos:"verb",en:"wound",f:"combat"},
+  "kelhar-":{pos:"verb",en:"defend",f:"combat"},
+  "plir-":{pos:"verb",en:"worship",f:"speech"},
+  "mese-":{pos:"verb",en:"formalize",f:"speech"},
+  "oio-":{pos:"verb",en:"rejoice",f:"emotion"},
+  "oimen-":{pos:"verb",en:"shine",f:"nature"},
+  "hele-":{pos:"verb",en:"mourn",f:"emotion"},
+  "siga-":{pos:"verb",en:"strengthen",f:"state"},
+  "mik-":{pos:"verb",en:"discover",f:"action"},
+  "bok-":{pos:"verb",en:"teach",f:"speech"},
+  "yas-":{pos:"verb",en:"exist",f:"state"},
+  "mir-":{pos:"verb",en:"think",f:"emotion"},
+  "dar-":{pos:"verb",en:"do",f:"action"},
+  "vel-":{pos:"verb",en:"want",f:"state"},
+  "sag-":{pos:"verb",en:"know",f:"state"},
+  "dor-":{pos:"verb",en:"love",f:"emotion"},
+  "trem-":{pos:"verb",en:"fear",f:"emotion"},
+  "ber-":{pos:"verb",en:"carry",f:"action"},
+  "mil-":{pos:"verb",en:"dream",f:"state"},
+  "eryes-":{pos:"verb",en:"stand (rise)",f:"rest"},
+  "kralsho-":{pos:"verb",en:"listen intently",f:"perception"},
+  "deorbrec-":{pos:"verb",en:"remove/take off",f:"compound"},
+  "deorhor-":{pos:"verb",en:"depart/leave",f:"compound"},
+  "biorbrec-":{pos:"verb",en:"accept/receive",f:"compound"},
+  "biorful-":{pos:"verb",en:"arrive",f:"compound"},
+  "zalyer-":{pos:"verb",en:"dwell/occupy",f:"compound"},
+  "ritbrin-":{pos:"verb",en:"share",f:"compound"},
+  "uyuhor-":{pos:"verb",en:"rise/ascend",f:"compound"},
+  "yulhor-":{pos:"verb",en:"dive/submerge",f:"compound"},
+  "helbrec-":{pos:"verb",en:"catch/grasp",f:"compound"},
+  "rithor-":{pos:"verb",en:"accompany",f:"compound"},
+  "biorbrin-":{pos:"verb",en:"deliver/hand over",f:"compound"},
+  "biorhor-":{pos:"verb",en:"head toward",f:"compound"},
+  "deorful-":{pos:"verb",en:"originate/come from",f:"compound"},
+  "deorbrin-":{pos:"verb",en:"take back/withdraw",f:"compound"},
+  "yuleser-":{pos:"verb",en:"crouch/kneel",f:"compound"},
+  "yulzhel-":{pos:"verb",en:"sink/drown",f:"compound"},
+  "uyufelm-":{pos:"verb",en:"survey/oversee",f:"compound"},
+  "uyuyer-":{pos:"verb",en:"preside/stand over",f:"compound"},
+  "zeayer-":{pos:"verb",en:"rest upon/land on",f:"compound"},
+  "helhor-":{pos:"verb",en:"attend/arrive at",f:"compound"},
+  "zhelbrec-":{pos:"verb",en:"kill",f:"compound"},
+  "rembrin-":{pos:"verb",en:"heal",f:"compound"},
+  "vobok-":{pos:"verb",en:"divine/interpret omens",f:"compound"},
+  cala:{pos:"noun",en:"water",f:"water"},
+  oimo:{pos:"noun",en:"fire",f:"fire"},
+  seret:{pos:"noun",en:"earth",f:"earth"},
+  ulaye:{pos:"noun",en:"sky",f:"sky"},
+  oimul:{pos:"noun",en:"sun",f:"fire"},
+  zhoil:{pos:"noun",en:"moon",f:"death"},
+  ril:{pos:"noun",en:"person (base form)",f:"person"},
+  rila:{pos:"noun",en:"person",f:"person"},
+  roil:{pos:"noun",en:"man",f:"person"},
+  roilel:{pos:"noun",en:"woman",f:"person"},
+  uroil:{pos:"noun",en:"child",f:"person"},
+  oiril:{pos:"noun",en:"human",f:"person"},
+  mehe:{pos:"noun",en:"animal",f:"nature"},
+  horil:{pos:"noun",en:"traveler/pilgrim/visitor",f:"person"},
+  kelril:{pos:"noun",en:"keeper",f:"person"},
+  prioi:{pos:"noun",en:"plant",f:"plant"},
+  priose:{pos:"noun",en:"tree",f:"plant"},
+  serma:{pos:"noun",en:"stone",f:"earth"},
+  serak:{pos:"noun",en:"house",f:"earth"},
+  vesh:{pos:"noun",en:"river",f:"water"},
+  mur:{pos:"noun",en:"sea",f:"water"},
+  sermig:{pos:"noun",en:"mountain",f:"earth"},
+  pri:{pos:"noun",en:"forest",f:"plant"},
+  seru:{pos:"noun",en:"desert",f:"earth"},
+  sere:{pos:"noun",en:"dirt/mud",f:"earth"},
+  kala:{pos:"noun",en:"ice",f:"water"},
+  pala:{pos:"noun",en:"wood/fuel",f:"plant"},
+  torel:{pos:"noun",en:"leaf",f:"plant"},
+  oif:{pos:"noun",en:"sunbeam",f:"fire"},
+  zhoif:{pos:"noun",en:"moonbeam",f:"death"},
+  oima:{pos:"noun",en:"ash",f:"fire"},
+  uloimul:{pos:"noun",en:"heaven",f:"sky"},
+  ulzhel:{pos:"noun",en:"underworld",f:"death"},
+  ei:{pos:"noun",en:"sun",f:"fire"},
+  hilser:{pos:"noun",en:"world",f:"abstract"},
+  ferag:{pos:"noun",en:"temple",f:"sacred"},
+  tibilidis:{pos:"noun",en:"scripture",f:"speech"},
+  irhi:{pos:"noun",en:"language",f:"speech"},
+  zheri:{pos:"noun",en:"spark",f:"fire"},
+  soi:{pos:"noun",en:"sound/voice",f:"fire"},
+  vol:{pos:"noun",en:"name",f:"speech"},
+  noril:{pos:"noun",en:"number",f:"speech"},
+  koiv:{pos:"noun",en:"letter/word",f:"speech"},
+  shedu:{pos:"noun",en:"memory",f:"abstract"},
+  himil:{pos:"noun",en:"dream/hope",f:"abstract"},
+  umba:{pos:"noun",en:"bosom/embrace",f:"abstract"},
+  vokil:{pos:"noun",en:"omen",f:"sky"},
+  calares:{pos:"noun",en:"hospitality (water-eating)",f:"abstract"},
+  meseul:{pos:"noun",en:"formal address (formal-life)",f:"abstract"},
+  dralin:{pos:"noun",en:"dialogue",f:"speech"},
+  brecnin:{pos:"noun",en:"splinter/fragment",f:"abstract"},
+  tibul:{pos:"noun",en:"text",f:"speech"},
+  res:{pos:"noun",en:"food",f:"abstract"},
+  cal:{pos:"noun",en:"drink",f:"abstract"},
+  drasu:{pos:"noun",en:"sleep",f:"rest"},
+  brinu:{pos:"noun",en:"gift",f:"abstract"},
+  bokari:{pos:"noun",en:"art/skill",f:"abstract"},
+  remu:{pos:"noun",en:"remedy",f:"state"},
+  vo:{pos:"noun",en:"manner/way/custom",f:"abstract"},
+  meelo:{pos:"noun",en:"ship",f:"water"},
+  helu:{pos:"noun",en:"sickness",f:"state"},
+  shul:{pos:"noun",en:"wind/spirit",f:"sky"},
+  suful:{pos:"noun",en:"breath",f:"sky"},
+  umbra:{pos:"noun",en:"shadow",f:"sky"},
+  mehig:{pos:"noun",en:"body",f:"person"},
+  okhicala:{pos:"noun",en:"tear",f:"water"},
+  hil:{pos:"noun|number",en:"heart / three",f:"person"},
+  oim:{pos:"noun",en:"light",f:"fire"},
+  drom:{pos:"noun",en:"darkness",f:"death"},
+  zhel:{pos:"noun",en:"death",f:"death"},
+  ulas:{pos:"noun",en:"life",f:"sky"},
+  ito:{pos:"noun",en:"kind/species/tribe",f:"person"},
+  kor:{pos:"noun",en:"head",f:"body"},
+  okhi:{pos:"noun",en:"eye",f:"body"},
+  bos:{pos:"noun",en:"hand",f:"body"},
+  pes:{pos:"noun",en:"foot",f:"body"},
+  serm:{pos:"noun",en:"bone",f:"body"},
+  zhak:{pos:"noun",en:"blood",f:"body"},
+  rik:{pos:"noun",en:"hair",f:"body"},
+  meh:{pos:"noun",en:"skin",f:"body"},
+  shedel:{pos:"noun",en:"time",f:"time"},
+  sheloimul:{pos:"noun",en:"day",f:"time"},
+  dron:{pos:"noun",en:"night",f:"time"},
+  forash:{pos:"noun",en:"morning",f:"time"},
+  kresh:{pos:"noun",en:"evening",f:"time"},
+  shelubel:{pos:"noun",en:"year",f:"time"},
+  shelori:{pos:"noun",en:"month",f:"time"},
+  oimash:{pos:"noun",en:"joy",f:"emotion"},
+  korba:{pos:"noun",en:"sorrow",f:"emotion"},
+  drakh:{pos:"noun",en:"anger",f:"emotion"},
+  veshal:{pos:"noun",en:"fear",f:"emotion"},
+  oiro:{pos:"noun",en:"awe",f:"emotion"},
+  mira:{pos:"noun",en:"respect",f:"emotion"},
+  tosig:{pos:"noun",en:"pride",f:"emotion"},
+  nel:{pos:"noun",en:"shame",f:"emotion"},
+  ruesh:{pos:"noun",en:"wisdom",f:"emotion"},
+  lar:{pos:"noun",en:"hope",f:"emotion"},
+  boimo:{pos:"noun",en:"torch",f:"fire"},
+  "bos'ri":{pos:"noun",en:"tool",f:"object"},
+  "pes'ri":{pos:"noun",en:"shoe",f:"object"},
+  "kor'ri":{pos:"noun",en:"hat",f:"object"},
+  tor:{pos:"noun",en:"coat/cloak",f:"object"},
+  "serak'bos":{pos:"noun",en:"shield",f:"combat"},
+  har:{pos:"noun",en:"war/clash",f:"combat"},
+  "har'ri":{pos:"noun",en:"weapon",f:"combat"},
+  "hele'ril":{pos:"noun",en:"enemy",f:"combat"},
+  "rit'ril":{pos:"noun",en:"ally",f:"combat"},
+  "har'al":{pos:"noun",en:"battle",f:"combat"},
+  istri:{pos:"noun",en:"weapon",f:"combat"},
+  serstri:{pos:"noun",en:"spear",f:"combat"},
+  torstri:{pos:"noun",en:"sword",f:"combat"},
+  istril:{pos:"noun",en:"warrior",f:"combat"},
+  mad:{pos:"noun",en:"mother",f:"person"},
+  tad:{pos:"noun",en:"father",f:"person"},
+  io:{pos:"noun",en:"Io (sun deity)",f:"deity"},
+  ulu:{pos:"noun",en:"Ulu (primordial sky)",f:"deity"},
+  sesser:{pos:"noun",en:"Sesser (primordial earth)",f:"deity"},
+  morzhul:{pos:"noun",en:"Mor'zhul (night/death)",f:"deity"},
+  calazur:{pos:"noun",en:"Calazur (waters)",f:"deity"},
+  sushul:{pos:"noun",en:"Sushul (wind)",f:"deity"},
+  oio:{pos:"adjective",en:"good"},
+  hele:{pos:"adjective",en:"bad"},
+  tesig:{pos:"adjective",en:"big"},
+  ninu:{pos:"adjective",en:"small"},
+  zuru:{pos:"adjective",en:"old"},
+  laru:{pos:"adjective",en:"new"},
+  oifas:{pos:"adjective",en:"hot"},
+  cafas:{pos:"adjective",en:"cold"},
+  siga:{pos:"adjective",en:"strong"},
+  inga:{pos:"adjective",en:"weak"},
+  mese:{pos:"adjective",en:"formal"},
+  pliria:{pos:"adjective",en:"holy"},
+  lari:{pos:"adjective",en:"swift"},
+  moimas:{pos:"adjective",en:"warm"},
+  mas:{pos:"adjective",en:"soft/gentle"},
+  esafas:{pos:"adjective",en:"cool"},
+  utoimos:{pos:"adjective",en:"bright"},
+  sirin:{pos:"adjective|noun",en:"gold",f:"color"},
+  lunei:{pos:"adjective|noun",en:"silver",f:"color"},
+  vhask:{pos:"adjective|noun",en:"red",f:"color"},
+  nara:{pos:"adjective|noun",en:"blue",f:"color"},
+  eli:{pos:"adjective|noun",en:"green",f:"color"},
+  aran:{pos:"adjective|noun",en:"white",f:"color"},
+  mor:{pos:"adjective|noun",en:"black",f:"color"},
+  oiran:{pos:"adjective|noun",en:"orange",f:"color"},
+  pel:{pos:"adjective|noun",en:"grey",f:"color"},
+  zal:{pos:"adposition",en:"in"},
+  zea:{pos:"adposition",en:"on"},
+  hel:{pos:"adposition",en:"at"},
+  rit:{pos:"adposition",en:"with"},
+  deor:{pos:"adposition",en:"from"},
+  bior:{pos:"adposition",en:"to"},
+  yul:{pos:"adposition",en:"under"},
+  uyu:{pos:"adposition",en:"over"},
+  ol:{pos:"conjunction",en:"and"},
+  ves:{pos:"conjunction",en:"or"},
+  yed:{pos:"conjunction",en:"but"},
+  sibel:{pos:"conjunction",en:"because"},
+  ie:{pos:"conjunction",en:"if"},
+  shi:{pos:"conjunction",en:"when"},
+  sem:{pos:"conjunction|number",en:"then / 2"},
+  ego:{pos:"interrogative",en:"what"},
+  egu:{pos:"interrogative",en:"who"},
+  ege:{pos:"interrogative",en:"where"},
+  "ego'shi":{pos:"interrogative",en:"when"},
+  "ego'kes":{pos:"interrogative",en:"why"},
+  "ego'mesh":{pos:"interrogative",en:"how"},
+  eu:{pos:"number",en:"1"},
+  geis:{pos:"number",en:"4"},
+  din:{pos:"number",en:"5"},
+  roa:{pos:"number",en:"6"},
+  ezdu:{pos:"number",en:"7"},
+  aet:{pos:"number",en:"8"},
+  oere:{pos:"number",en:"9"},
+  fer:{pos:"number",en:"10"},
+  ser:{pos:"number|noun",en:"20 / earth (combining)",f:"earth"},
+  her:{pos:"number",en:"30"},
+  ger:{pos:"number",en:"40"},
+  der:{pos:"number",en:"50"},
+  rer:{pos:"number",en:"60"},
+  ezer:{pos:"number",en:"70"},
+  aer:{pos:"number",en:"80"},
+  oer:{pos:"number",en:"90"},
+  em:{pos:"copula",en:"is"},
+  re:{pos:"adposition",en:"of/about"},
+  na:{pos:"particle",en:"negation (not)"},
+  eugo:{pos:"ordinal",en:"first/firstly"},
+  semeugo:{pos:"ordinal",en:"second/secondly"},
+  okh:{pos:"interjection",en:"alas!"},
+  kralia:{pos:"interjection",en:"hear!/attention!"}
+    };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // Build reverse dict (en -> kaharin entries)
+    const revD = {};
+    Object.entries(D).forEach(([k,v]) => {
+      if (!revD[v.en]) revD[v.en] = [];
+      revD[v.en].push({word:k,...v});
+    });
+
+    // === GRAMMAR ENGINE ===
+    const G = {
+      lookUp(w) {
+        w = w.toLowerCase().replace(/[^a-z']/g,"");
+        if (D[w]) return {word:w,...D[w]};
+        const base = w.replace(/'(al|el|es|e|ri)$/,"");
+        if (D[base]) return {word:base,...D[base]};
+        return null;
+      },
+      pluralForm(n) {
+        const v = n.replace(/[^aeiou]/g,"");
+        const last = v[v.length-1];
+        const s = ["a","o","u"].includes(last) ? "al" : "el";
+        return n + "'" + s;
+      },
+      possessiveForm(n) {
+        const lc = n[n.length-1];
+        return n + "'" + ((lc==="s"||lc==="z") ? "e" : "es");
+      },
+      conjugate(root, person, tense, mood, aspect) {
+        const P = {1:"an",2:"ad",3:"a","1pl":"al","2pl":"ar","3pl":"as"};
+        const T = {present:"",past:"ashi",future:"oko"};
+        const M = {indicative:"",subjunctive:"esh",conditional:"uk"};
+        const A = {simple:"",progressive:"en",perfect:"un",passive:"el",causative:"ak",reciprocal:"in"};
+        let f = root;
+        if (A[aspect]) f += A[aspect];
+        if (T[tense]) f += T[tense];
+        if (M[mood]) f += M[mood];
+        f += P[person] || "";
+        return f;
+      },
+      translateEnToKah(sentence) {
+        const words = sentence.toLowerCase().replace(/[.,!?;:]/g,"").split(/\s+/);
+        const result = [];
+        let i = 0;
+        while (i < words.length) {
+          const w = words[i];
+          // Articles
+          if (w === "the") { result.push({en:"the",kah:"eo",note:"definite article"}); i++; continue; }
+          if (w === "a" || w === "an") { result.push({en:w,kah:"'ri",note:"indefinite (attaches to next noun)"}); i++; continue; }
+          if (w === "is" || w === "are" || w === "am") { result.push({en:w,kah:"ema",note:"copula (3sg: ema)"}); i++; continue; }
+          if (w === "not") { result.push({en:"not",kah:"na",note:"negation (after verb)"}); i++; continue; }
+          if (w === "and") { result.push({en:"and",kah:"ol",note:"conjunction"}); i++; continue; }
+          if (w === "but") { result.push({en:"but",kah:"yed",note:"conjunction"}); i++; continue; }
+          if (w === "or") { result.push({en:"or",kah:"ves",note:"conjunction"}); i++; continue; }
+          if (w === "in") { result.push({en:"in",kah:"zal",note:"adposition (enclitic: noun'zal)"}); i++; continue; }
+          if (w === "on") { result.push({en:"on",kah:"zea",note:"adposition (enclitic: noun'zea)"}); i++; continue; }
+          if (w === "from") { result.push({en:"from",kah:"deor",note:"adposition"}); i++; continue; }
+          if (w === "to") { result.push({en:"to",kah:"bior",note:"adposition"}); i++; continue; }
+          if (w === "with") { result.push({en:"with",kah:"rit",note:"adposition (free-standing)"}); i++; continue; }
+          if (w === "my" || w === "his" || w === "her" || w === "its") { result.push({en:w,kah:"(use 'es possessive on noun)",note:"possessive enclitic"}); i++; continue; }
+          if (w === "i") { result.push({en:"I",kah:"ean",note:"pronoun 1sg"}); i++; continue; }
+          if (w === "you") { result.push({en:"you",kah:"ead",note:"pronoun 2sg"}); i++; continue; }
+          if (w === "he" || w === "she" || w === "it") { result.push({en:w,kah:"eo",note:"pronoun 3sg (also definite article)"}); i++; continue; }
+          if (w === "we") { result.push({en:"we",kah:"eal",note:"pronoun 1pl"}); i++; continue; }
+          if (w === "they") { result.push({en:"they",kah:"eos",note:"pronoun 3pl"}); i++; continue; }
+          // Try direct lookup
+          const lookup = this.lookUp(w);
+          if (lookup) { result.push({en:w,kah:lookup.word,note:lookup.pos}); i++; continue; }
+          // Try partial match
+          let found = false;
+          Object.entries(D).forEach(([k,v]) => {
+            if (!found && v.en.toLowerCase().includes(w) && w.length > 2) {
+              result.push({en:w,kah:k,note:v.pos + " (partial)"});
+              found = true;
+            }
+          });
+          if (!found) result.push({en:w,kah:"???",note:"unknown"});
+          i++;
+        }
+        return result;
+      },
+      translateKahToEn(sentence) {
+        const words = sentence.toLowerCase().replace(/[.,!?;:]/g,"").split(/\s+/);
+        return words.map(w => {
+          const clean = w.replace(/'/g,"'");
+          const lookup = this.lookUp(clean);
+          if (lookup) return {kah:clean,en:lookup.en,pos:lookup.pos};
+          return {kah:clean,en:"???",pos:"unknown"};
+        });
+      }
+    };
+
+    // === TABS ===
+    document.querySelectorAll(".tab").forEach(t => {
+      t.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+        document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+        t.classList.add("active");
+        document.getElementById("panel-"+t.dataset.tab).classList.add("active");
+      });
+    });
+
+    // === TRANSLATE ===
+    document.getElementById("btnEnToKah").addEventListener("click", () => {
+      const input = document.getElementById("inputEn").value.trim();
+      if (!input) return;
+      const tokens = G.translateEnToKah(input);
+      const kahLine = tokens.map(t => t.kah).join(" ");
+      const notes = tokens.map(t => `<span style="color:var(--dim)">${t.en} → ${t.kah}</span> <span style="color:var(--dim);font-size:10px">(${t.note})</span>`).join("<br>");
+      document.getElementById("inputKah").value = kahLine;
+      document.getElementById("translateResult").textContent = kahLine;
+      document.getElementById("translateSub").innerHTML = notes;
+    });
+
+    document.getElementById("btnKahToEn").addEventListener("click", () => {
+      const input = document.getElementById("inputKah").value.trim();
+      if (!input) return;
+      const tokens = G.translateKahToEn(input);
+      const enLine = tokens.map(t => t.en).join(" ");
+      const details = tokens.map(t => `<span style="color:var(--fire-glow)">${t.kah}</span> → <span style="color:var(--text)">${t.en}</span> <span style="color:var(--dim);font-size:10px">(${t.pos})</span>`).join("<br>");
+      document.getElementById("inputEn").value = enLine;
+      document.getElementById("translateResult").textContent = enLine;
+      document.getElementById("translateSub").innerHTML = details;
+    });
+
+    document.getElementById("btnClear").addEventListener("click", () => {
+      document.getElementById("inputEn").value = "";
+      document.getElementById("inputKah").value = "";
+      document.getElementById("translateResult").textContent = "Type a sentence above and click a translate button.";
+      document.getElementById("translateSub").innerHTML = "";
+    });
+
+    // === VOCAB ===
+    const allWords = Object.entries(D).map(([k,v]) => ({word:k,...v}));
+    const posTypes = [...new Set(allWords.map(w => w.pos.split("|")[0]))].sort();
+    let activeFilter = "all";
+
+    function renderFilters() {
+      const row = document.getElementById("filterRow");
+      row.innerHTML = "";
+      const all = document.createElement("button");
+      all.className = "filter-btn" + (activeFilter==="all"?" active":"");
+      all.textContent = "All (" + allWords.length + ")";
+      all.addEventListener("click", () => { activeFilter="all"; renderFilters(); renderVocab(); });
+      row.appendChild(all);
+      posTypes.forEach(p => {
+        const btn = document.createElement("button");
+        const count = allWords.filter(w => w.pos.includes(p)).length;
+        btn.className = "filter-btn" + (activeFilter===p?" active":"");
+        btn.textContent = p + " (" + count + ")";
+        btn.addEventListener("click", () => { activeFilter=p; renderFilters(); renderVocab(); });
+        row.appendChild(btn);
+      });
+    }
+
+    function renderVocab() {
+      const list = document.getElementById("vocabList");
+      const search = document.getElementById("vocabSearch").value.toLowerCase();
+      let filtered = allWords;
+      if (activeFilter !== "all") filtered = filtered.filter(w => w.pos.includes(activeFilter));
+      if (search) filtered = filtered.filter(w => w.word.includes(search) || w.en.toLowerCase().includes(search));
+      list.innerHTML = filtered.map(w =>
+        `<div class="vocab-row"><span class="v-word">${w.word}</span><span class="v-pos">${w.pos}</span><span class="v-meaning">${w.en}</span></div>`
+      ).join("");
+    }
+
+    document.getElementById("vocabSearch").addEventListener("input", renderVocab);
+    renderFilters();
+    renderVocab();
+
+    // === CONJUGATOR ===
+    document.getElementById("btnConj").addEventListener("click", () => {
+      const root = document.getElementById("conjRoot").value.trim().replace(/-$/,"");
+      if (!root) return;
+      const person = document.getElementById("conjPerson").value;
+      const tense = document.getElementById("conjTense").value;
+      const mood = document.getElementById("conjMood").value;
+      const aspect = document.getElementById("conjAspect").value;
+
+      const form = G.conjugate(root, person, tense, mood, aspect);
+      document.getElementById("conjResult").textContent = form;
+      document.getElementById("conjSub").textContent = `${root}- + ${aspect} + ${tense} + ${mood} + ${person}`;
+
+      // Show full conjugation table
+      const wrap = document.getElementById("conjTableWrap");
+      const persons = [["1","ean"],["2","ead"],["3","eo"],["1pl","eal"],["2pl","ear"],["3pl","eos"]];
+      let html = '<table class="conj-table"><tr><th>Person</th><th>Present</th><th>Past</th><th>Future</th></tr>';
+      persons.forEach(([p, pron]) => {
+        html += `<tr><td>${pron}</td>`;
+        ["present","past","future"].forEach(t => {
+          const f = G.conjugate(root, p, t, "indicative", "simple");
+          const highlight = (t===tense && p===person && mood==="indicative" && aspect==="simple") ? ' style="color:var(--gold)"' : '';
+          html += `<td${highlight}>${f}</td>`;
+        });
+        html += '</tr>';
+      });
+      html += '</table>';
+      wrap.innerHTML = html;
+    });
+  </script>
+</body>
+</html>
